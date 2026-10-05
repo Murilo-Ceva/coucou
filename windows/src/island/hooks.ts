@@ -231,18 +231,18 @@ function handleHook(island: Island, payload: HookPayload) {
     }
 
     case "Stop":
+      ensurePill();
       State.updateTask(agentId, "finished");
       if (payload.message) State.appendStep(agentId, payload.message.slice(0, 60));
       Sound.play("finish");
       if (focused) surface("finished", true);
       else State.setPillBadge(agentId, "finished");
       window.setTimeout(() => {
-        if (isExternalAgent) {
-          State.removeTask(agentId);
-        } else {
-          State.updateTask(agentId, "idle");
-          State.setPillBadge(agentId, null);
-        }
+        // Keep external-agent pills (for example Codex) visible after a run.
+        // Reset them to idle instead of removing them so the user can still
+        // identify and reopen the agent after SessionEnd.
+        State.updateTask(agentId, "idle");
+        State.setPillBadge(agentId, null);
       }, 5200);
       break;
 
@@ -254,8 +254,11 @@ function handleHook(island: Island, payload: HookPayload) {
       break;
 
     case "SessionEnd":
+      ensurePill();
       if (isExternalAgent) {
-        State.removeTask(agentId);
+        // External agents stay as idle pills instead of disappearing at session end.
+        State.updateTask(agentId, "idle");
+        State.setPillBadge(agentId, null);
       } else {
         State.updateTask(agentId, "idle");
         clearSession();
